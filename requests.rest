@@ -1,8 +1,30 @@
-POST http://localhost:3000/signup 
+# POST http://localhost:3000/signin
+# Content-Type: application/json
+
+# {
+#     "fullname": "tony adams",
+#     "email": "tony2@gmail.com.com",
+#     "password": "Tony22"
+# }
+
+
+# POST http://localhost:3000/create-blog
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3YjNiYzI3YWZhZGJkNzVlMWZlY2U0MSIsImlhdCI6MTczOTg3OTExM30.QrLFhA7-eSal19r24aG60PdMlf3bC-lh5IpMUgtdz9o
+
+# {
+#     "title": "testitle",
+#     "banner": "https://www.example.com/image-url",
+#     "des": "this is a short description",
+#     "content": {
+#         "blocks": [1,2]
+#     },
+#     "tags": ["tags1", "tags2"]
+# }
+
+POST http://localhost:3000/get-profile
 Content-Type: application/json
 
 {
-    "fullname": "kunna",
-    "email": "kuna2@gmail.com.com",
-    "password": "Kunaal22"
+    "username": "danielite200"
 }
