@@ -22,9 +22,16 @@
 #     "tags": ["tags1", "tags2"]
 # }
 
-POST http://localhost:3000/get-profile
+POST http://localhost:3000/get-blog
 Content-Type: application/json
 
 {
-    "username": "danielite200"
+    "blog_id": "TheArtofFoodExploringFlavorsandCulinaryDelightsmqTz1Pnbaj490YsHgG9aF"
 }
+
+# POST http://localhost:3000/get-profile
+# Content-Type: application/json
+
+# {
+#     "username": "danielite200"
+# }
