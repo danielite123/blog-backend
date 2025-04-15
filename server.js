@@ -701,7 +701,7 @@ server.post("/isLiked-by-user", verifyJWT, (req, res) => {
 server.post("/add-comment", verifyJWT, (req, res) => {
   let user_id = req.user;
 
-  let { _id, comment, blog_author, replying_to } = req.body;
+  let { _id, comment, blog_author, replying_to, notification_id } = req.body;
 
   if (!comment.length) {
     return res
@@ -754,6 +754,12 @@ server.post("/add-comment", verifyJWT, (req, res) => {
       ).then((replyingToCommentDoc) => {
         notificationObj.notification_for = replyingToCommentDoc.commented_by;
       });
+      if (notification_id) {
+        Notification.findOneAndUpdate(
+          { _id: notification_id },
+          { reply: commentFile._id }
+        ).then((notification) => console.log("notification updated"));
+      }
     }
 
     new Notification(notificationObj).save().then((notification) => {
