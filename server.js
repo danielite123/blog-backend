@@ -454,6 +454,67 @@ server.post("/update-profile-img", verifyJWT, (req, res) => {
     });
 });
 
+server.post("/update-profile", verifyJWT, (req, res) => {
+  let { username, bio, social_links } = req.body;
+
+  let bioLimit = 150;
+
+  if (username.length < 3) {
+    return res
+      .status(403)
+      .json({ error: "Username should be at least 3 letters long" });
+  }
+
+  if (bio.length > bioLimit) {
+    return res
+      .status(403)
+      .json({ error: `Bio should not be more than ${bioLimit} characters` });
+  }
+
+  let socialLinksArr = Object.keys(social_links);
+
+  try {
+    for (let i = 0; i < socialLinksArr.length; i++) {
+      if (social_links[socialLinksArr[i]].length) {
+        let hostname = new URL(social_links[socialLinksArr[i]]).hostname;
+
+        if (
+          !hostname.includes(`${socialLinksArr[i]}.com`) &&
+          socialLinksArr[i] != "website"
+        ) {
+          return res.status(403).json({
+            error: `${socialLinksArr[i]} link is invalid. You must enter a full link`,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    return res.status(500).json({
+      error: "You must provide full social links with http(s) included",
+    });
+  }
+
+  let updateObj = {
+    "personal_info.username": username,
+    "personal_info.bio": bio,
+    social_links,
+  };
+
+  User.findOneAndUpdate({ _id: req.user }, updateObj, {
+    runValidators: true,
+  })
+    .then(() => {
+      return res.status(200).json({ username });
+    })
+    .catch((err) => {
+      if (err.code == 11000) {
+        return res.status(409).json({ error: "username already taken" });
+      }
+
+      return res.status(500).json({ error: err.message });
+    });
+});
+
 server.post("/create-blog", verifyJWT, (req, res) => {
   let authorId = req.user;
 
@@ -820,6 +881,88 @@ server.post("/delete-comment", verifyJWT, (req, res) => {
         .json({ error: "You are not authorized to delete this comment" });
     }
   });
+});
+
+server.get("/new-notification", verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  Notification.exists({
+    notification_for: user_id,
+    seen: false,
+    user: { $ne: user_id },
+  })
+    .then((result) => {
+      if (result) {
+        return res.status(200).json({ new_notification_available: true });
+      } else {
+        return res.status(200).json({ new_notification_available: false });
+      }
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.post("/notifications", verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  let { page, filter, deletedDocCount } = req.body;
+
+  let maxLimit = 10;
+
+  let findQuery = { notification_for: user_id, user: { $ne: user_id } };
+
+  let skipDocs = (page - 1) * maxLimit;
+
+  if (filter != "all") {
+    findQuery.type = filter;
+  }
+
+  if (deletedDocCount) {
+    skipDocs -= deletedDocCount;
+  }
+
+  Notification.find(findQuery)
+    .skip(skipDocs)
+    .limit(maxLimit)
+    .populate("blog", "title blog_id")
+    .populate(
+      "user",
+      "personal_info.fullname personal_info.username personal_info.profile_img"
+    )
+    .populate("comment", "comment")
+    .populate("replied_on_comment", "comment")
+    .populate("reply", "comment")
+    .sort({ createdAt: -1 })
+    .select("createdAt type seen reply")
+    .then((notifications) => {
+      return res.status(200).json({ notifications });
+    })
+    .catch((err) => {
+      console.log(err.message);
+      return res.status(500).json({ error: err.message });
+    });
+});
+
+server.post("/all-notifications-count", verifyJWT, (req, res) => {
+  let user_id = req.user;
+
+  let { filter } = req.body;
+
+  let findQuery = { notification_for: user_id, user: { $ne: user_id } };
+
+  if (filter != "all") {
+    findQuery.type = filter;
+  }
+
+  Notification.countDocuments(findQuery)
+    .then((count) => {
+      return res.status(200).json({ totalDocs: count });
+    })
+    .catch((err) => {
+      return res.status(500).json({ error: err.message });
+    });
 });
 
 server.listen(PORT, () => {
