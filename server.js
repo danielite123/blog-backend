@@ -847,9 +847,10 @@ const deleteComments = (_id) => {
         console.log("comment notification deleted")
       );
 
-      Notification.findOneAndDelete({ reply: _id }).then((notification) =>
-        console.log("reply notification deleted")
-      );
+      Notification.findOneAndUpdate(
+        { reply: _id },
+        { $unset: { reply: 1 } }
+      ).then((notification) => console.log("reply notification deleted"));
 
       Blog.findOneAndUpdate(
         { _id: comment.blog_id },
@@ -873,20 +874,27 @@ const deleteComments = (_id) => {
 
 server.post("/delete-comment", verifyJWT, (req, res) => {
   let user_id = req.user;
-
   let { _id } = req.body;
 
-  Comment.findOne({ _id }).then((comment) => {
-    if (user_id == comment.commented_by || user_id == comment.blog_author) {
-      deleteComments(_id);
+  Comment.findOne({ _id })
+    .then((comment) => {
+      if (!comment) {
+        return res.status(404).json({ error: "Comment not found" });
+      }
 
-      return res.status(200).json({ status: "done" });
-    } else {
-      return res
-        .status(403)
-        .json({ error: "You are not authorized to delete this comment" });
-    }
-  });
+      if (user_id == comment.commented_by || user_id == comment.blog_author) {
+        deleteComments(_id);
+        return res.status(200).json({ status: "done" });
+      } else {
+        return res
+          .status(403)
+          .json({ error: "You are not authorized to delete this comment" });
+      }
+    })
+    .catch((err) => {
+      console.error("Error finding comment:", err);
+      return res.status(500).json({ error: "Server error" });
+    });
 });
 
 server.get("/new-notification", verifyJWT, (req, res) => {
@@ -943,6 +951,11 @@ server.post("/notifications", verifyJWT, (req, res) => {
     .sort({ createdAt: -1 })
     .select("createdAt type seen reply")
     .then((notifications) => {
+      Notification.updateMany(findQuery, { seen: true })
+        .skip(skipDocs)
+        .limit(maxLimit)
+        .then(() => console.log("notification seen"));
+
       return res.status(200).json({ notifications });
     })
     .catch((err) => {
